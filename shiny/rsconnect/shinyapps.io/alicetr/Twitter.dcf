@@ -1,0 +1,12 @@
+name: Twitter
+title: Twitter
+username:
+account: alicetr
+server: shinyapps.io
+hostUrl: https://api.shinyapps.io/v1
+appId: 247462
+bundleId: 1129206
+url: https://alicetr.shinyapps.io/Twitter/
+when: 1513047603.36542
+asMultiple: FALSE
+asStatic: FALSE
