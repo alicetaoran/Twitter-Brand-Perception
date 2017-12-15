@@ -1,0 +1,414 @@
+---
+title: "Report of Twitter Brand Perception"
+author: "Ran Tao"
+date: "December 13, 2017"
+output:
+  html_document: default
+  pdf_document: default
+---
+
+# Introduction
+
+The global smart home market is growing at a fast
+pace, with an expected value of USD 53.45 billion in 2022.
+Amazon Alexa, Google Home, and Apple HomePod are the
+most famous smart home devices. They are getting
+popular and changing our daily life.
+
+
+Amazon released Alexa, a 9-inch tall cylinder speaker
+controlled by a cloud-base voice assistant in Nov 2014.
+Following the Amazon Alexa's popularity, Alphabet released
+the Google Home in late 2016. At the end of December 2017,
+Apple will also be joining the fray with the Siri-powered HomePod.
+
+
+They are similar products that serve as intelligent personal
+assistant and could be used as a home automation system.
+Therefore, I am motivated to study how people comment them on Twitter.
+
+
+The goal of this project is to study the brand perception of 
+Amazon Alexa, Google Home and Apple Home using Twitter data.
+Through the text mining of twitter data, we can know how people
+perceive these similar products, assess the efficiency of companies'
+marketing strategy and help these three companies to improve their
+marketing strategy.
+
+
+
+
+# Set up Twitter
+
+```{r setup, include=FALSE}
+library(devtools)
+library(twitteR)
+library(tidytext)
+library(tidyverse)
+library(dplyr)
+library(scales)
+library(wordcloud)
+library(RColorBrewer)
+library(ggplot2)
+library(plotly)
+get_sentiments("bing")
+```
+
+The codes below enable us to set up Twitter,
+which will be used to get tweets.
+
+api_key <- 	"RrPTCIryCswqP35AFeanh73cV"
+
+api_secret <- "w4JEhIMHsEArgaandqAtTqhc610kRvenP8e8fdXfSRCnuLVsn9"
+
+access_token <- "927638841925742593-3NjhdkxNIJRbGQ8PPDIMIpFskIMFpPd"
+
+access_token_secret <- "Qfd1mKmPbi0E6O6cmblVG4Fmi6CQceG1CtbyQKR28nAAY"
+
+setup_twitter_oauth(api_key, 
+                    api_secret, 
+                    access_token, 
+                    access_token_secret)
+
+
+# Get tweets that contain our key words
+
+The codes below extract 3000 tweets for each product,
+and transform the tweets into data frame work
+
+
+Alexatweet <- searchTwitter("Amazon Alexa", 
+                        n=3000, lang="en", since="2014-01-01")
+                        
+Alexatweetdf <- twListToDF(Alexatweet)
+
+
+GoogleHometweet <- searchTwitter("Google Home", 
+                             n=3000, lang="en", since="2014-01-01")
+                             
+GoogleHometweetdf <- twListToDF(GoogleHometweet)
+
+
+AppleHometweet <- searchTwitter("Apple HomePod", 
+                                  n=3000, lang="en", since="2014-01-01")
+                                  
+AppleHometweetdf <- twListToDF(AppleHometweet)
+
+
+# Store the tweets data
+
+The codes below store our extracted tweets in csv files,
+which facilitate us to run our text analysis without running the
+code above every time.
+
+write.csv(Alexatweetdf,"Alexa.csv")
+
+write.csv(GoogleHometweetdf,"GoogleHome.csv")
+
+write.csv(AppleHometweetdf,"AppleHome.csv")
+
+
+
+
+# Text Analysis
+
+## 1) Import the stored data and unnest tokens the tweets texts
+
+The codes below help us to break the tweets texts into words.
+
+```{r}
+
+Alexadf<-read.csv("Alexa.csv")
+GHdf<-read.csv("GoogleHome.csv")
+AHdf<-read.csv("AppleHome.csv")
+
+
+Alexatext<-select(Alexadf,text)
+Alexatext$text<-as.character(Alexatext$text)
+Alexatext<- Alexatext %>% 
+  unnest_tokens(word, text)
+
+
+GHtext<-select(GHdf,text)
+GHtext$text<-as.character(GHtext$text)
+GHtext<- GHtext %>% 
+  unnest_tokens(word, text)
+
+
+AHtext<-select(AHdf,text)
+AHtext$text<-as.character(AHtext$text)
+AHtext<- AHtext %>% 
+  unnest_tokens(word, text)
+
+```
+
+
+## 2) remove stop words
+
+The stop words package enables us to remove no-meaning 
+or conjunction words, I also created my own stop words.
+
+```{r}
+mystopwords<-c("https","rt","htt","votedougjones")
+
+mystopwords<-as.data.frame(mystopwords)
+colnames(mystopwords)<-"word"
+mystopwords$word<-as.character(mystopwords$word)
+
+Alexa<-Alexatext %>%
+  anti_join(stop_words) %>% 
+  anti_join(mystopwords) %>%
+  count(word, sort = TRUE) %>%
+  filter(str_detect(word,"^[a-z']+$"))
+
+GH<-GHtext %>%
+  anti_join(stop_words) %>% 
+  anti_join(mystopwords) %>%
+  count(word, sort = TRUE) %>%
+  filter(str_detect(word,"^[a-z']+$"))
+
+AH<-AHtext %>%
+  anti_join(stop_words) %>% 
+  anti_join(mystopwords) %>%
+  count(word, sort = TRUE) %>%
+  filter(str_detect(word,"^[a-z']+$"))
+
+```
+
+
+## 3) EDA
+
+```{r, echo=FALSE}
+
+Alexa %>%
+  filter(n > 210) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n)) +
+  geom_col(fill="cornflowerblue") +
+  xlab(NULL) +
+  coord_flip()+
+  ggtitle("Alexa Words Frequency")+
+  ylab("Count")
+
+
+Alexa %>%
+  with(wordcloud(word, n, max.words = 50, colors = brewer.pal(8, "Dark2")))
+
+```
+
+As we can see, the tops words of Alexa are 
+Alexa, Amazon, music, wake, echo, win, chance, amp, follow,
+dorischristmas, alarms, and gift.
+
+These words reflect the main features of Alexa perceived by
+customers:
+First, it's a smart echo produced by Amazon;
+Second, people use it to play music and also use as the alarm to wake them up;
+Third, people consider it to be a good Christmas gift and there are some
+marketing campaigns where people can win Alexa as a free gift.
+
+Besides, we also found the words like, Alex, Jones, and CIA.
+As Alexa Jones grilled an Amazon Echo on his show, asking Alexa — 
+the device’s personal assistant — about its connections to the CIA.
+
+
+```{r, echo=FALSE}
+GH %>%
+  filter(n > 200) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n)) +
+  geom_col(fill="brown3") +
+  xlab(NULL) +
+  coord_flip()+
+  ggtitle("Google Home Words Frequency")+
+  ylab("Count")
+
+GH %>%
+  with(wordcloud(word, n, max.words = 50, colors = brewer.pal(8, "Dark2")))
+
+```
+
+The top words for Google Home are:
+home, google, max, smart, speaker, 
+mini, follow, sign, volume and incredible.
+
+These words reflect how people perceive Google Home:
+First, Google Home is a mini smart speaker;
+Second, there is a new product called Google Home Max with bigger volume;
+Third, there are ongoing marketing events on Twitter,
+where you follow a company and you can get Google Home;
+Besides, incredible implies that people have a positive impression of Google Home.
+
+
+```{r, echo=FALSE}
+AH %>%
+  filter(n > 100) %>%
+  mutate(word = reorder(word, n)) %>%
+  ggplot(aes(word, n)) +
+  geom_col(fill="darkgray") +
+  xlab(NULL) +
+  coord_flip()+
+  ggtitle("Apple Home Words Frequency")+
+  ylab("Count")
+
+AH %>%
+  with(wordcloud(word, n, max.words = 50, colors = brewer.pal(8, "Dark2")))
+
+```
+
+As we can see, the top words of Apple Home are
+apple, homepod, win, giving, enter, gleamapp, winner, lucky
+home, cnet, siri, audio.
+
+From these top words we can see how customer perceive Apple HomePod:
+First, Gleam is doing Apple HomePod Giveaway campaign, where people
+can win Apple HomePod as a free gift;
+Second, cnet published a news that Apple HomePod is delayed until early 2018;
+Third, Apple HomePod is powered by Siri and allows multi-speaker audio streaming;
+Besides, we can see people are comparing Apple HomePod with Google Home.
+People are also discussing the price of Apple HomePod, as it has the higher price
+compared with Alexa and Google Home.
+
+## 4) Sentiment analysis
+
+```{r, echo=FALSE}
+
+AlexaST <- Alexa %>%
+  inner_join(get_sentiments("bing")) %>%
+  spread(sentiment, n, fill = 0) %>%
+  mutate(sentiment = positive - negative)
+
+A=ggplot(data = AlexaST,aes(word,sentiment,fill=sentiment))+
+  geom_col()+theme(axis.text.x = element_blank())+
+  ggtitle("Alexa Sentiment Analysis")
+
+ggplotly(A)
+```
+
+We did sentiment analysis to see how people's comment on Alexa,
+overall, there are more positive words about Alexa.
+we can see there are some negative words with high frequency, 
+such as hard and lying, which may indicate people have some difficulties
+of properly using Alexa; While win is a positive word with very high frequency
+related to Alexa, we can see people are interested in the marketing campaign of Alexa.
+
+
+```{r, echo=FALSE}
+GHst <- GH %>%
+  inner_join(get_sentiments("bing")) %>%
+  spread(sentiment, n, fill = 0) %>%
+  mutate(sentiment = positive - negative)
+
+B=ggplot(data = GHst,aes(word,sentiment,fill=sentiment))+
+  geom_col()+theme(axis.text.x = element_blank())+
+  ggtitle("GoogleHome Sentiment Analysis")
+
+ggplotly(B)
+```
+
+Overall, there are more positive words about Google Home
+We can see there are some negative words, such as damn and loud, 
+indicating people feel google home is loud.
+While smart and incredible are positive words with high frequency,
+we can see more people think Google Home is smart and incredible
+
+
+```{r, echo=FALSE}
+AHst <- AH %>%
+  inner_join(get_sentiments("bing")) %>%
+  spread(sentiment, n, fill = 0) %>%
+  mutate(sentiment = positive - negative)
+
+C=ggplot(data = AHst,aes(word,sentiment,fill=sentiment))+
+  geom_col()+theme(axis.text.x = element_blank())+
+  ggtitle("AppleHome Sentiment Analysis")
+
+ggplotly(C)
+
+```
+
+Unlike Amazon Alexa and Google Home, Apple HomePod has more positive words,
+such as lucky, win and winner, which is related to the marketing campaign.
+Still, there are some negative words but with lower frequency like bugs, delay
+and wrong.
+
+## 5) Correlation analysis
+
+```{r}
+
+allproduct<- bind_rows(mutate(GH, product = "GoogleHome"),
+                       mutate(AH, product = "AppleHome"), 
+                       mutate(Alexa, product = "Alexa")) 
+
+
+allpro <- allproduct %>% 
+  mutate(proportion = round(n / sum(n),5)) %>% 
+  select(-n) %>% 
+  spread(product, proportion) %>% 
+  gather(product, proportion, "GoogleHome":"AppleHome") %>%
+  na.omit(proportion)
+
+
+cor.test(data = allpro[allpro$product == "GoogleHome",],
+         ~ proportion + Alexa)
+
+cor.test(data = allpro[allpro$product == "AppleHome",], 
+         ~ proportion + Alexa)
+
+
+allpro2 <- allproduct %>% 
+  mutate(proportion = round(n / sum(n),5)) %>% 
+  select(-n) %>% 
+  spread(product, proportion) %>% 
+  gather(product, proportion, "AppleHome":"Alexa") %>%
+  na.omit(proportion)
+
+cor.test(data = allpro2[allpro2$product == "AppleHome",], 
+         ~ proportion + GoogleHome)
+
+```
+
+As they are similar products, we did correlation analysis.
+Our null hypothesis test: there is no correlation between the sentiment
+of two products.
+The significance level is 0.05.
+We found there is small positive correlation between the sentiment of Alexa
+and apple home.
+No significant correlation between Alexa and Google Home nor between Google
+Home and Apple Home.
+
+
+
+
+# Conclusion
+
+We can see there are both similarity and difference in people's perception
+to Alexa, Google Home, and Apple Home.
+
+
+The features of alarm and music player of Alexa are perceived by the customer,
+while there are a lot of other features that Amazon can put efforts to promote
+among customers, such as controlling smart home devices, read news and audiobooks,
+and make calls.There are some negative aspects of Alexa, like a connection with CIA. 
+Amazon could clarify on public and build a good image of Alexa.
+
+
+While Google Home has a better reputation in the market, people recognize it as
+a smart and incredible home device. But people are also complaining the loud volume
+of Google Home. Google could improve the volume control and solve some technical bugs
+of google home. There are not many discussions about the specific features of Google Home. Google could make some efforts to promote the specific features of Google Home.
+
+
+Apple Home hasn't been launched yet, but people are discussing it a lot,
+such as the delay of its release, the price and the techniques including 
+Siri and audio streaming. And People are comparing it with Google Home.
+So it's import for Apple to promote some special features that separate
+Apple Home from Google Home and Alexa.
+
+All these three products have online marketing campaigns which attract customers.
+Christmas would be a good opportunity to promote these products.
+
+
+
+
+
